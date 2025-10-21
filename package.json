@@ -1,6 +1,6 @@
 {
   "name": "@specy/x86-64",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "description": "An emulator for x86-64 based off https://x64.halb.it",
   "homepage": "https://github.com/Specy/x86-64-blink-js#readme",
   "bugs": {
@@ -27,17 +27,17 @@
   "scripts": {
     "init": "npm run build:init-blink",
     "build:init-blink": "cd x86-64-playground && ./init_blink.sh",
-    "build:blink": "cd x86-64-playground && ./compile_blink.sh && cp ./webapp/src/assets/blinkenlib.wasm ../build/blinkenlib.wasm && cp ./webapp/src/assets/blinkenlib.js ../build/blinkenlib.js",
-    "build:binutils": "cd x86-64-playground && ./compile_musl_binutils.sh && cp ./webapp/src/assets/assemblers/gnu-as.elf ../build/gnu-as.elf && cp ./webapp/src/assets/assemblers/gnu-ld.elf ../build/gnu-ld.elf",
-    "build:nasm": "cd x86-64-playground && ./compile_musl_nasm.sh && cp ./webapp/src/assets/assemblers/nasm.elf ../build/nasm.elf",
+    "build:blink": "cd x86-64-playground && ./compile_blink.sh && cp ./webapp/src/assets/blinkenlib.wasm ../src/deps/blinkenlib.wasm && cp ./webapp/src/assets/blinkenlib.js ../src/deps/blinkenlib.js",
+    "build:binutils": "cd x86-64-playground && ./compile_musl_binutils.sh && cp ./webapp/src/assets/assemblers/gnu-as.elf ../src/deps/gnu-as.elf && cp ./webapp/src/assets/assemblers/gnu-ld.elf ../src/deps/gnu-ld.elf",
+    "build:nasm": "cd x86-64-playground && ./compile_musl_nasm.sh && cp ./webapp/src/assets/assemblers/nasm.elf ../src/deps/nasm.elf",
     "build:deps": "concurrently \"npm run build:blink\" \"npm run build:binutils\" \"npm run build:nasm\" && npm run move-deps",
-    "build:lib": "tsdown"
-  },
-  "dependencies": {
+    "build:lib": "tsdown",
+    "start": "npx tsx ./src/test.ts"
   },
   "devDependencies": {
-    "tsdown": "^0.15.9",
+    "@types/node": "^24.9.1",
     "concurrently": "^9.2.1",
+    "tsdown": "^0.15.9",
     "typescript": "^5.9.3"
   }
 }

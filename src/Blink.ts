@@ -1,6 +1,7 @@
 // @ts-ignore
 import blinkenlib from "./deps/blinkenlib";
-import {type AssemblerMode} from "./assemblers";
+import {type AssemblerMode, type DiagnosticLine} from "./assemblers";
+import {type Callbacks, nextTick, Signals, signals_info, SigtrapCodes} from './constants'
 
 /**
  * Machine Cross-language struct.
@@ -54,8 +55,8 @@ class M_CLStruct {
         dis__buffer: {index: 29, pointer: true},
     };
     memory: WebAssembly.Memory;
-    memView: DataView;
-    structView: DataView;
+    memView!: DataView;
+    structView!: DataView;
     struct_pointer: number;
 
     constructor(memory: WebAssembly.Memory, struct_pointer: number) {
@@ -144,88 +145,6 @@ class M_CLStruct {
     }
 }
 
-const signals = {
-    SIGHUP: 1,
-    SIGINT: 2,
-    SIGQUIT: 3,
-    SIGILL: 4,
-    SIGTRAP: 5,
-    SIGABRT: 6,
-    SIGBUS: 7,
-    SIGFPE: 8,
-    SIGKILL: 9,
-    SIGUSR1: 10,
-    SIGSEGV: 11,
-    SIGUSR2: 12,
-    SIGPIPE: 13,
-    SIGALRM: 14,
-    SIGTERM: 15,
-    SIGSTKFLT: 16,
-    SIGCHLD: 17,
-    SIGCONT: 18,
-    SIGSTOP: 19,
-    SIGTSTP: 20,
-    SIGTTIN: 21,
-    SIGTTOU: 22,
-    SIGURG: 23,
-    SIGXCPU: 24,
-    SIGXFSZ: 25,
-    SIGVTALRM: 26,
-    SIGPROF: 27,
-    SIGWINCH: 28,
-    SIGIO: 29,
-    SIGPWR: 30,
-    SIGSYS: 31,
-};
-
-const sigtrap_codes = {
-    BLINK_PREEMPT: 40,
-    BLINK_STEP: 41,
-};
-
-const signals_info = {
-    1: {
-        name: "SIGHUP",
-        description: "Hang up controlling terminal or process.",
-    },
-    2: {name: "SIGINT", description: "Interrupt from keyboard, Control-C."},
-    3: {name: "SIGQUIT", description: "Quit from keyboard, Control-\\."},
-    4: {name: "SIGILL", description: "Illegal instruction."},
-    5: {name: "SIGTRAP", description: "Breakpoint for debugging."},
-    6: {name: "SIGABRT", description: "Abnormal termination."},
-    7: {name: "SIGBUS", description: "Bus error."},
-    8: {name: "SIGFPE", description: "Floating-point exception."},
-    9: {name: "SIGKILL", description: "Forced-process termination."},
-    10: {name: "SIGUSR1", description: "Available to processes."},
-    11: {name: "SIGSEGV", description: "Invalid memory reference."},
-    12: {name: "SIGUSR2", description: "Available to processes."},
-    13: {name: "SIGPIPE", description: "Write to pipe with no readers."},
-    14: {name: "SIGALRM", description: "Real-timer clock."},
-    15: {name: "SIGTERM", description: "Process termination."},
-    16: {name: "SIGSTKFLT", description: "Coprocessor stack error."},
-    17: {
-        name: "SIGCHLD",
-        description:
-            "Child process stopped or terminated or got a signal if traced.",
-    },
-    18: {name: "SIGCONT", description: "Resume execution, if stopped."},
-    19: {name: "SIGSTOP", description: "Stop process execution, Ctrl-Z."},
-    20: {name: "SIGTSTP", description: "Stop process issued from tty."},
-    21: {name: "SIGTTIN", description: "Background process requires input."},
-    22: {name: "SIGTTOU", description: "Background process requires output."},
-    23: {name: "SIGURG", description: "Urgent condition on socket."},
-    24: {
-        name: "SIGXCPU",
-        description: "CPU time limit exceeded, execution took too long.",
-    },
-    25: {name: "SIGXFSZ", description: "File size limit exceeded."},
-    26: {name: "SIGVTALRM", description: "Virtual timer clock."},
-    27: {name: "SIGPROF", description: "Profile timer clock."},
-    28: {name: "SIGWINCH", description: "Window resizing."},
-    29: {name: "SIGIO", description: "I/O now possible."},
-    30: {name: "SIGPWR", description: "Power supply failure."},
-    31: {name: "SIGSYS", description: "Bad system call."},
-};
 
 /**
  * A javascript wrapper for the blink x86-64 emulator.
@@ -235,13 +154,13 @@ const signals_info = {
  *
  */
 export class Blink {
-    #stdinHandler: () => number;
-    #stdoutHandler: (charCode: number) => void;
-    #stderrHandler: (charCode: number) => void;
-    #signalHandler: (signal: number, code: number) => void;
-    #stateChangeHandler: (state: string, oldState: string) => void;
+    #stdinHandler!: () => number | null;
+    #stdoutHandler!: (charCode: number) => void;
+    #stderrHandler!: (charCode: number) => void;
+    #signalHandler!: (signal: number, code: number) => void;
+    #stateChangeHandler!: (state: string, oldState: string) => void;
 
-    m: M_CLStruct;
+    m!: M_CLStruct;
 
     states = {
         NOT_READY: "NOT_READY",
@@ -253,12 +172,12 @@ export class Blink {
         PROGRAM_STOPPED: "PROGRAM_STOPPED",
     } as const;
 
-    mode: AssemblerMode;
+    mode!: AssemblerMode;
 
     Module: any; /*Emscripten Module object*/
-    memory: WebAssembly.Memory;
+    memory!: WebAssembly.Memory;
     state: (typeof this.states)[keyof typeof this.states] = this.states.NOT_READY;
-    stopReason: null | { loadFail: boolean; exitCode: number; details: string };
+    stopReason: null | { loadFail: boolean; exitCode: number; details: string } = null;
 
     //program emulation arguments
     max_argc_len = 200;
@@ -274,31 +193,36 @@ export class Blink {
     //assembler stdout and stderr
     assembler_logs = "";
     //assembler diagnostic errors
-    assembler_errors = [];
+    assembler_errors: DiagnosticLine[] = [];
 
     /**
      * Initialize the emscripten blink module.
      */
     constructor(
         mode: AssemblerMode,
-        stdinHandler?: () => number,
-        stdoutHandler?: (charCode: number) => void,
-        stderrHandler?: (charCode: number) => void,
-        signalHandler?: (signal: number, code: number) => void,
-        stateChangeHandler?: (state: string, oldState: string) => void,
+        callbacks: Callbacks
     ) {
-        this.setCallbacks(
-            stdinHandler,
-            stdoutHandler,
-            stderrHandler,
-            signalHandler,
-            stateChangeHandler,
-        );
-        this.#initEmscripten(mode);
+        this.setCallbacks(callbacks);
+        void this.init(mode)
     }
 
-    async #initEmscripten(mode?: AssemblerMode) {
+    private initPromise: Promise<void> | undefined;
+
+    async init(mode: AssemblerMode,) {
+        if (this.initPromise) return this.initPromise;
+        this.initPromise = this.#initEmscripten(mode);
+        return
+    }
+
+    async #initEmscripten(mode: AssemblerMode) {
         this.mode = mode;
+        const [assembler, linker] = await Promise.all([
+            this.#fetchBinaryFile(mode.binaries.assembler.fileurl),
+            mode.binaries.linker
+                ? this.#fetchBinaryFile(mode.binaries.linker.fileurl)
+                : null,
+
+        ])
         this.Module = await blinkenlib({
             noInitialRun: true,
             preRun: (M: any) => {
@@ -313,21 +237,12 @@ export class Blink {
                         this.#stderrHandler(charcode);
                     },
                 );
-                M.FS.createPreloadedFile(
-                    "/",
-                    "assembler",
-                    mode.binaries.assembler.fileurl,
-                    true,
-                    true,
-                );
-                if (mode.binaries.linker) {
-                    M.FS.createPreloadedFile(
-                        "/",
-                        "linker",
-                        mode.binaries.linker.fileurl,
-                        true,
-                        true,
-                    );
+                M.FS.writeFile('/assembler', new Uint8Array(assembler));
+                M.FS.chmod('/assembler', 0o777);
+
+                if (linker) {
+                    M.FS.writeFile('/linker', new Uint8Array(linker));
+                    M.FS.chmod('/linker', 0o777);
                 }
             },
         });
@@ -392,8 +307,8 @@ export class Blink {
      * SIGTRAP is the only signal that does not indicate
      * a program stop.
      */
-    #extern_c__signal_callback(sig: number, code: number) {
-        if (sig !== signals.SIGTRAP) {
+    #extern_c__signal_callback(sig: Signals, code: number) {
+        if (sig !== Signals.SIGTRAP) {
             const exitCode = 128 + sig;
             let details = `Program terminated with Exit(${exitCode}) Due to signal ${sig}`;
             if (Object.prototype.hasOwnProperty.call(signals_info, sig)) {
@@ -409,13 +324,13 @@ export class Blink {
             this.#setState(this.states.PROGRAM_STOPPED);
             this.#signalHandler(sig, code);
         } else if (
-            sig === signals.SIGTRAP &&
-            code === sigtrap_codes.BLINK_PREEMPT
+            sig === Signals.SIGTRAP &&
+            code === SigtrapCodes.BLINK_PREEMPT
         ) {
             console.log("preempt");
-            requestAnimationFrame(() => {
+            nextTick().then(() => {
                 this.Module._blinkenlib_preempt_resume();
-            });
+            })
         } else {
             this.#signalHandler(sig, code);
         }
@@ -447,7 +362,7 @@ export class Blink {
         console.log("exit callback called");
     }
 
-    #setEmulationArgs(progname, argc, argv) {
+    #setEmulationArgs(progname: string, argc: string, argv: string) {
         this.m.writeStringToHeap(
             this.progname_ptr,
             progname,
@@ -457,25 +372,19 @@ export class Blink {
         this.m.writeStringToHeap(this.argv_ptr, argv, this.max_argv_len);
     }
 
-    setCallbacks(
-        stdinHandler?: () => number,
-        stdoutHandler?: (charCode: number) => void,
-        stderrHandler?: (charCode: number) => void,
-        signalHandler?: (signal: number, code: number) => void,
-        stateChangeHandler?: (state: string, oldState: string) => void,
+    setCallbacks({
+                     stdinHandler,
+                     stderrHandler,
+                     signalHandler,
+                     stateChangeHandler,
+                     stdoutHandler
+                 }: Callbacks
     ) {
-        if (stdinHandler) this.#stdinHandler = stdinHandler;
-        if (stdoutHandler) this.#stdoutHandler = stdoutHandler;
-        if (stderrHandler) this.#stderrHandler = stderrHandler;
-        if (signalHandler) this.#signalHandler = signalHandler;
-        if (stateChangeHandler) this.#stateChangeHandler = stateChangeHandler;
-
-        if (!this.#stdinHandler) this.#stdinHandler = this.#default_stdinHandler;
-        if (!this.#stdoutHandler) this.#stdoutHandler = this.#default_stdoutHandler;
-        if (!this.#stderrHandler) this.#stderrHandler = this.#default_stderrHandler;
-        if (!this.#signalHandler) this.#signalHandler = this.#default_signalHandler;
-        if (!this.#stateChangeHandler)
-            this.#stateChangeHandler = this.#default_stateChangeHandler;
+        this.#stdinHandler = stdinHandler ?? this.#default_stdinHandler
+        this.#stdoutHandler = stdoutHandler ?? this.#default_stdoutHandler
+        this.#stderrHandler = stderrHandler ?? this.#default_stderrHandler
+        this.#signalHandler = signalHandler ?? this.#default_signalHandler
+        this.#stateChangeHandler = stateChangeHandler ?? this.#default_stateChangeHandler
     }
 
     async #fetchBinaryFile(url: string): Promise<ArrayBuffer> {
@@ -488,6 +397,7 @@ export class Blink {
             return arrayBuffer;
         } catch (error) {
             console.error("Failed to fetch binary file:", error);
+            throw error
         }
     }
 
@@ -516,7 +426,7 @@ export class Blink {
         //download linker, if required by this mode
         if (mode.binaries.linker) {
             const downloadedElf = await this.#fetchBinaryFile(
-                this.mode.binaries.linker.fileurl,
+                mode.binaries.linker.fileurl,
             );
             const data = new Uint8Array(downloadedElf);
             const FS = this.Module.FS;
@@ -545,6 +455,7 @@ export class Blink {
         FS.chmod("/program", 0o777);
 
         this.starti();
+        return true;
     }
 
     /**
@@ -556,7 +467,7 @@ export class Blink {
      * If successful, it will be possible to launch the compiled program
      * via this.starti(), or this.run()
      */
-    loadASM(asmString: string): boolean {
+    async loadASM(asmString: string): Promise<boolean> {
         if (this.state === this.states.NOT_READY) {
             return false;
         }
@@ -565,15 +476,20 @@ export class Blink {
         this.#setState(this.states.ASSEMBLING);
         const FS = this.Module.FS;
         FS.writeFile("/assembly.s", asmString);
+        await nextTick()
         //this hack ensures that the function is called after a browser render pass
-        requestAnimationFrame(() => {
+        try {
             this.#setEmulationArgs(
                 "/assembler",
                 this.mode.binaries.assembler.commands,
                 "",
             );
             this.Module._blinkenlib_run_fast();
-        });
+            return true
+        } catch (e) {
+            console.error(e)
+            return false
+        }
     }
 
     loadASM_assembler_exit_callback(code: number) {
@@ -590,24 +506,24 @@ export class Blink {
             this.#setState(this.states.READY);
             return;
         }
-        if (!this.mode.binaries.linker) {
+        if (this.mode.binaries.linker) {
+            //we need a separate linking step
+            this.#setState(this.states.LINKING);
+            //this hack ensures that the function is called after a browser render pass
+            nextTick().then(() => {
+                this.#setEmulationArgs(
+                    "/linker",
+                    this.mode.binaries.linker!.commands,
+                    "",
+                );
+                this.Module._blinkenlib_run_fast();
+            })
+        } else {
             //the current assembler directly generates an ELF without a linker
             const FS = this.Module.FS;
             FS.chmod("/program", 0o777);
             this.#setState(this.states.PROGRAM_LOADED);
             this.starti();
-        } else {
-            //we need a separate linking step
-            this.#setState(this.states.LINKING);
-            //this hack ensures that the function is called after a browser render pass
-            requestAnimationFrame(() => {
-                this.#setEmulationArgs(
-                    "/linker",
-                    this.mode.binaries.linker.commands,
-                    "",
-                );
-                this.Module._blinkenlib_run_fast();
-            });
         }
     }
 
@@ -684,7 +600,7 @@ export class Blink {
         console.log(`received signal: ${sig} code: ${code}`);
     }
 
-    #default_stdinHandler(): number {
+    #default_stdinHandler(): number | null {
         console.log("stdin requested, EOF returned");
         return null; //EOF
     }

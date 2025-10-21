@@ -46,7 +46,7 @@ export type Assemblers_key = keyof typeof assemblers;
  * - If the linker program is not defined we assume that the assembler
  *   directly generates the ELF /program
  */
-export const assemblers: Record<string, AssemblerMode> = {
+export const assemblers = {
     GNU_trunk: {
         id: "GNU_trunk",
         display_name: "GNU as",
@@ -93,7 +93,7 @@ export const assemblers: Record<string, AssemblerMode> = {
             },
         },
     },
-} as const;
+} as const satisfies Record<string, AssemblerMode>
 
 /**
  * Assembler diagnostic parser for the NASM assembler
@@ -108,8 +108,8 @@ export function nasm_diagnostics(str: string): Array<DiagnosticLine> {
     for (const line of lines) {
         const match = line.match(regex);
         if (match) {
-            const lineNumber = Number.parseInt(match[1], 10);
-            const message = match[3].trim();
+            const lineNumber = Number.parseInt(match[1]!, 10);
+            const message = match[3]!.trim();
             diagnostics.push({ line: lineNumber, error: message });
         }
     }
@@ -129,8 +129,8 @@ export function gnu_diagnostics(str: string): Array<DiagnosticLine> {
         const match = line.match(regex);
         if (match) {
             diagnostics.push({
-                line: Number.parseInt(match[1], 10),
-                error: match[2],
+                line: Number.parseInt(match[1]!, 10),
+                error: match[2]!,
             });
         }
     }
@@ -156,7 +156,7 @@ export function fasm_diagnostics(str: string): Array<DiagnosticLine> {
         const errorMatch = line.match(errorRegex);
         // Capture line number if found
         if (lineMatch) {
-            lineNum = Number.parseInt(lineMatch[1]);
+            lineNum = Number.parseInt(lineMatch[1]!);
         }
         // Capture error message if found
         if (errorMatch) {
