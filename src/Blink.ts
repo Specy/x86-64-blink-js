@@ -81,6 +81,34 @@ class M_CLStruct {
         );
     }
 
+    getDisasm(): { lines: string[], currentLine: number, maxLines: number } {
+        const ptr = this.getPtr('dis__buffer');
+        const max_lines = this.getPtr('dis__max_lines');
+        const max_line_len = this.getPtr('dis__max_line_len');
+        const current_line = this.getPtr('dis__current_line');
+
+        // Handle disassembler failures
+        if (current_line > max_lines) {
+            return { lines: [], currentLine: current_line, maxLines: max_lines };
+        }
+
+        const lines: string[] = [];
+
+        // Read each line from the 2D buffer
+        for (let i = 0; i < max_lines; i++) {
+            let line = '';
+            // Read characters until null terminator or max line length
+            for (let j = 0; j < max_line_len; j++) {
+                const ch = this.memView.getUint8(ptr + i * max_line_len + j);
+                if (!ch) break; // null terminator
+                line += String.fromCharCode(ch);
+            }
+            lines.push(line);
+        }
+
+        return { lines, currentLine: current_line, maxLines: max_lines };
+    }
+
     stringReadBytes(key: keyof typeof this.keys, num: number): string {
         const ptr = this.getPtr(key);
         let retStr = "";

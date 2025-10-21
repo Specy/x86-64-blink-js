@@ -64,10 +64,8 @@ export class X86_64Emulator {
                 report: 'Emulator not initialized'
             };
         }
-
-        this.compiledCode = code;
+        this.compiledCode = '';
         const success = this.blink.loadASM(code);
-
         if (!success) {
             return {
                 ok: false,
@@ -77,6 +75,7 @@ export class X86_64Emulator {
         }
 
         await this.waitForBlinkReady(this.blink);
+        this.compiledCode = this.blink.m.getDisasm().lines.join('\n');
 
         if (this.blink.assembler_errors.length > 0) {
             const errors: CompilationError[] = this.blink.assembler_errors.map(err => ({
@@ -182,8 +181,7 @@ export class X86_64Emulator {
     }
 
     _getInstructionAt(address: bigint): Instruction | null {
-        // This would require disassembly which may not be directly exposed
-        // Return a placeholder for now
+        //TODO
         return {
             address,
             lineNumber: 0,
