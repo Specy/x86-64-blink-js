@@ -26,16 +26,16 @@ export class X86_64Emulator {
         this.blinkTypeCheck = new Blink(selectedMode!, callbacks ?? {});
     }
 
-    async _initialize(_undoSize: number): Promise<void> {
+    async initialize(_undoSize: number): Promise<void> {
         await this.blink.init(this.blink.mode);
         this.initialized = true;
     }
 
-    _getCompiledCode(): { code: string } {
+    getCompiledCode(): { code: string } {
         return {code: this.compiledCode};
     }
 
-    _dispose(): void {
+    dispose(): void {
         // Clean up resources if needed
         this.initialized = false;
     }
@@ -56,7 +56,7 @@ export class X86_64Emulator {
         });
     }
 
-    async _compile(code: string): Promise<{ ok: true } | { ok: false, errors: CompilationError[], report: string }> {
+    async compile(code: string): Promise<{ ok: true } | { ok: false, errors: CompilationError[], report: string }> {
         if (!this.initialized) {
             return {
                 ok: false,
@@ -92,8 +92,8 @@ export class X86_64Emulator {
         return {ok: true};
     }
 
-    async _checkCode(_code: string): Promise<LineError[]> {
-        const success = this.blinkTypeCheck.loadASM(_code);
+    async checkCode(code: string): Promise<LineError[]> {
+        const success = this.blinkTypeCheck.loadASM(code);
         const errors: LineError[] = [];
         await this.waitForBlinkReady(this.blink);
 
@@ -113,24 +113,24 @@ export class X86_64Emulator {
         return errors;
     }
 
-    _undo(): void {
+    undo(): void {
         throw new Error("Method cannot be implemented");
     }
 
-    _canUndo(): boolean {
+    canUndo(): boolean {
         return false
     }
 
-    async _step(): Promise<{ terminated: boolean }> {
+    async step(): Promise<{ terminated: boolean }> {
         this.blink.stepi();
-        return {terminated: this._hasTerminated()};
+        return {terminated: this.hasTerminated()};
     }
 
-    _getStatus(): EmulatorStatus {
-        return this._hasTerminated() ? EmulatorStatus.Terminated : EmulatorStatus.Running;
+    getStatus(): EmulatorStatus {
+        return this.hasTerminated() ? EmulatorStatus.Terminated : EmulatorStatus.Running;
     }
 
-    _writeMemoryBytes(address: bigint, data: Uint8Array): void {
+    writeMemoryBytes(address: bigint, data: Uint8Array): void {
         const ptr = Number(address);
         for (let i = 0; i < data.length; i++) {
             const byte = data[i];
@@ -140,7 +140,7 @@ export class X86_64Emulator {
         }
     }
 
-    _readMemoryBytes(address: bigint, length: bigint): Uint8Array {
+    readMemoryBytes(address: bigint, length: bigint): Uint8Array {
         const ptr = Number(address);
         const len = Number(length);
         const result = new Uint8Array(len);
@@ -150,24 +150,24 @@ export class X86_64Emulator {
         return result;
     }
 
-    _getNextInstruction(): Instruction | null {
-        const pc = this._getPc();
-        return this._getInstructionAt(pc);
+    getNextInstruction(): Instruction | null {
+        const pc = this.getPc();
+        return this.getInstructionAt(pc);
     }
 
-    _getUndoHistory(_max: number): ExecutionStep[] {
+    getUndoHistory(_max: number): ExecutionStep[] {
         throw new Error("Method cannot be implemented");
     }
 
-    _getPc(): bigint {
+    getPc(): bigint {
         return this.blink.m.readU64('rip');
     }
 
-    _getSp(): bigint {
+    getSp(): bigint {
         return this.blink.m.readU64('rsp');
     }
 
-    _getFlags(): { name: string, value: number, prev?: number }[] {
+    getFlags(): { name: string, value: number, prev?: number }[] {
         const flags = this.blink.m.getPtr('flags');
 
         return FLAGS.map(f => ({
@@ -176,11 +176,11 @@ export class X86_64Emulator {
         }));
     }
 
-    _getCallStack(): StackFrame[] {
+    getCallStack(): StackFrame[] {
         throw new Error("Method cannot be implemented");
     }
 
-    _getInstructionAt(address: bigint): Instruction | null {
+    getInstructionAt(address: bigint): Instruction | null {
         //TODO
         return {
             address,
@@ -189,19 +189,19 @@ export class X86_64Emulator {
         };
     }
 
-    _getRegisterValues(): bigint[] {
-        return X86_REGISTER_NAMES.map(reg => this._getRegisterValue(reg));
+    getRegisterValues(): bigint[] {
+        return X86_REGISTER_NAMES.map(reg => this.getRegisterValue(reg));
     }
 
-    _getRegisterValuesRecord(): Record<X86Register, bigint> {
+    getRegisterValuesRecord(): Record<X86Register, bigint> {
         const record = {} as Record<X86Register, bigint>;
         for (const reg of X86_REGISTER_NAMES) {
-            record[reg] = this._getRegisterValue(reg);
+            record[reg] = this.getRegisterValue(reg);
         }
         return record;
     }
 
-    _getRegisterValue(register: X86Register, size?: RegisterSize): bigint {
+    getRegisterValue(register: X86Register, size?: RegisterSize): bigint {
         const registerKey = register.toLowerCase() as keyof typeof this.blink.m.keys;
 
         if (!(registerKey in this.blink.m.keys)) {
@@ -225,7 +225,7 @@ export class X86_64Emulator {
         return value & masks[size];
     }
 
-    _setRegisterValue(register: X86Register, value: bigint, size?: RegisterSize): void {
+    setRegisterValue(register: X86Register, value: bigint, size?: RegisterSize): void {
         const registerKey = register.toLowerCase() as keyof typeof this.blink.m.keys;
 
         if (!(registerKey in this.blink.m.keys)) {
@@ -245,17 +245,17 @@ export class X86_64Emulator {
         }
     }
 
-    _hasTerminated(): boolean {
+    hasTerminated(): boolean {
         return this.blink.state === this.blink.states.PROGRAM_STOPPED;
     }
 
-    async _run(_limit?: number, _breakpoints?: number[]): Promise<EmulatorStatus> {
+    async run(_limit?: number, _breakpoints?: number[]): Promise<EmulatorStatus> {
         this.blink.run();
 
         // Wait for program to complete or hit limit
         return new Promise((resolve) => {
             const check = () => {
-                if (this._hasTerminated()) {
+                if (this.hasTerminated()) {
                     resolve(EmulatorStatus.Terminated);
                 } else {
                     setTimeout(check, 10);

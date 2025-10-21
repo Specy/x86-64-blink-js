@@ -8,8 +8,8 @@ async function run(){
         }
     })
 
-    await emulator._initialize(10000)
-    const result = await emulator._compile(`
+    await emulator.initialize(100000)
+    const result = await emulator.compile(`
 ;---------------------
 ;  Flat Assembler file
 ;  Syscall Hello World (Corrected)
@@ -37,7 +37,7 @@ msg_size = $-msg
     if(!result.ok){
         console.error("Compilation failed:", result.errors)
     }
-    await emulator._run()
+    await emulator.run()
 }
 
 
