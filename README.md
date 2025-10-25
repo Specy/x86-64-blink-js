@@ -14,7 +14,7 @@ To build from source you must have installed:
 - bison
 
 
-## Notes
+## Patch Notes
 
 there is an error in the `compile_musl_binutils.sh` the `gas/ld-new` should be `ld/ld-new`
 and the copy should be `../../webapp` instead of `../webapp
