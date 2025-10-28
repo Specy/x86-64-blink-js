@@ -28,7 +28,7 @@
     "init": "npm run build:init-blink",
     "build:init-blink": "./scripts/init_blink.sh",
     "build:blink": "./scripts/compile_blink.sh",
-    "start": "npx tsx ./src/test.ts"
+    "test": "npx tsx ./src/test.ts"
   },
   "devDependencies": {
     "@types/node": "^24.9.1",

@@ -16,7 +16,11 @@ To build from source you must have installed:
 
 ## Notes
 
-git clone https://github.com/robalb/x86-64-blink-js/ --recurse-submodules 
+To test this:
 
-of you cloned the repo already:
+1. `git clone https://github.com/robalb/x86-64-blink-js/`
+1. `npm run build:init-blink`
+1. `npm run build:blink`
+1. `npm run test`
+
 
