@@ -16,5 +16,7 @@ To build from source you must have installed:
 
 ## Notes
 
-there is an error in the `compile_musl_binutils.sh` the `gas/ld-new` should be `ld/ld-new`
-and the copy should be `../../webapp` instead of `../webapp
+git clone https://github.com/robalb/x86-64-blink-js/ --recurse-submodules 
+
+of you cloned the repo already:
+

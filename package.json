@@ -26,12 +26,8 @@
   },
   "scripts": {
     "init": "npm run build:init-blink",
-    "build:init-blink": "cd x86-64-playground && ./init_blink.sh",
-    "build:blink": "cd x86-64-playground && ./compile_blink.sh && cp ./webapp/src/assets/blinkenlib.wasm ../src/deps/blinkenlib.wasm && cp ./webapp/src/assets/blinkenlib.js ../src/deps/blinkenlib.js",
-    "build:binutils": "cd x86-64-playground && ./compile_musl_binutils.sh && cp ./webapp/src/assets/assemblers/gnu-as.elf ../src/deps/gnu-as.elf && cp ./webapp/src/assets/assemblers/gnu-ld.elf ../src/deps/gnu-ld.elf",
-    "build:nasm": "cd x86-64-playground && ./compile_musl_nasm.sh && cp ./webapp/src/assets/assemblers/nasm.elf ../src/deps/nasm.elf",
-    "build:deps": "concurrently \"npm run build:blink\" \"npm run build:binutils\" \"npm run build:nasm\" && npm run move-deps",
-    "build:lib": "tsdown",
+    "build:init-blink": "./scripts/init_blink.sh",
+    "build:blink": "./scripts/compile_blink.sh",
     "start": "npx tsx ./src/test.ts"
   },
   "devDependencies": {
