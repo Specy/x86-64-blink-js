@@ -25,9 +25,8 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "init": "npm run build:init-blink",
-    "build:init-blink": "./scripts/init_blink.sh",
-    "build:blink": "./scripts/compile_blink.sh",
+    "init": "./scripts/init_blink.sh",
+    "build": "./scripts/compile_blink.sh",
     "test": "npx tsx ./src/test.ts"
   },
   "devDependencies": {

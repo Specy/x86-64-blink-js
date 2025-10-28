@@ -1,15 +1,7 @@
 #!/bin/bash
 
-#---------------------
-# This is temporary submodule scaffolding,
-# to use a specific branch as submodule.
-# It will not be necessary when the main branch
-# of the libblink repo will be functional.
-# TODO: remove
-#---------------------
 git submodule update --init --recursive
 cd libblink
-git checkout libblink_playground_test
 
 
 #---------------------

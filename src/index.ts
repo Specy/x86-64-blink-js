@@ -42,6 +42,12 @@ export class X86_64Emulator {
 
 
     private async waitForBlinkReady(instance: Blink): Promise<void> {
+        // Note(al): you can just register a callback (pseudocode):
+        // blink.SetCallback({setState: (state)=>{
+        //      if state == READY {
+        //        resolve()
+        //      }
+        // }})
         // Wait for compilation to complete
         await new Promise<void>((resolve) => {
             const checkState = () => {
